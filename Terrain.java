@@ -49,24 +49,46 @@ public class Terrain {
    }
 
    public void iterateGlobalTerrain (int iterations, double deviationFraction, boolean taper ) {
+
+	   // Create global terrain by Great Circles method
 	   for (int i=0;i<iterations;i++) {
-		   for (int counter=0;counter<(globalRings*globalSectors);counter++) {
 			   double theta1=random.nextDouble()*PI;
 			   double phi1=random.nextDouble()*2*PI;
 			   double theta2=random.nextDouble()*PI;
 			   double phi2=random.nextDouble()*2*PI;
 			   double radius=parent.radius;
 			   
-			   double x1=CoordinateConversion.getX(radius, theta1, phi1);
-			   double y1=CoordinateConversion.getY(radius, theta1, phi1);
-			   double z1=CoordinateConversion.getZ(radius, theta1, phi1);
+			   double Ax=CoordinateConversion.getX(radius, theta1, phi1);
+			   double Ay=CoordinateConversion.getY(radius, theta1, phi1);
+			   double Az=CoordinateConversion.getZ(radius, theta1, phi1);
 			   
-			   double x2=CoordinateConversion.getX(radius, theta2, phi2);
-			   double y2=CoordinateConversion.getY(radius, theta2, phi2);
-			   double z2=CoordinateConversion.getZ(radius, theta2, phi2);
-			   
-			   
-			   
+			   double Bx=CoordinateConversion.getX(radius, theta2, phi2);
+			   double By=CoordinateConversion.getY(radius, theta2, phi2);
+			   double Bz=CoordinateConversion.getZ(radius, theta2, phi2);
+
+			   double Cx=0;
+			   double Cy=0;
+			   double cz=0;
+
+			   double BPx=Bx-Ax;	   
+			   double BPy=By-Ay;	   
+			   double BPz=Bz-Az;	   
+
+			   double CPx=Cx-Ax;	   
+			   double CPy=Cy-Ay;	   
+			   double CPz=Cz-Az;	   
+				   
+			    
+		for (int counter=counter<(globalRings*globalSectors);counter++) {
+			   double Xx=CoordinateConversion.getX(radius, arrayTheta[counter], arrayPhi[counter];
+		           double Xy=CoordinateConversion.getY(radius, arrayTheta[counter], arrayPhi[counter];
+		           double Xz=CoordinateConversion.getZ(radius, arrayTheta[counter], arrayPhi[counter];
+
+			   double XPx=Xx-Ax;	   
+			   double XPy=Xy-Ay;	   
+			   double XPz=Xz-Az;
+
+		           double det=(BPx*((CPy*XPz)-(CPz*XPy)))-(BPy*((CPx*XPz)-(CPz*XPx)))+(BPz*((CPx*XPy)-(CPy*XPx)));	   
 			   
 		   }
 	   }
