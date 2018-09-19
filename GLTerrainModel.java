@@ -12,17 +12,20 @@ public class GLTerrainModel {
 	public double altitude;
 	public double theta;
 	public double phi;
+    private String terrain_texture_filename;
 
 	// Return vertex data from a terrain model
 	public float[] getVertexData() {
-		System.out.println(vertexdata);
 		return vertexdata;
 	}
 
 	// Return element data from a terrain model
 	public short[] getElementData() {
-		System.out.println(elementdata);
 		return elementdata;
+	}
+	
+	public String getTextureFilename() {
+		return terrain_texture_filename;
 	}
 
 	GLTerrainModel(OrbitingBody body, float alt,double the, double ph, int rings,int sectors) {
@@ -34,19 +37,19 @@ public class GLTerrainModel {
 		double factor=(altitude+0.00001)/body.radius;
 		if (factor>1) factor=1;
 		if (factor<0.00001) factor=0.00001; 
-		System.out.println(factor);
 
 		double delta_theta=factor*PI;
 		double delta_phi=factor*PI;
 		
 		if (factor==1) delta_phi=delta_phi*2;
-
 		theta=the;
 		phi=ph;
 		
 		double start_theta=theta-(delta_theta/2);
 		double start_phi=phi-(delta_phi/2);
-
+		
+		terrain_texture_filename=body.getDiffuseTexture();
+		
 		vertexdata=new float[(rings * sectors * 8)];
 		elementdata=new short[(rings * sectors * 6)];
 
@@ -58,8 +61,7 @@ public class GLTerrainModel {
 
 				double t = start_theta + (delta_theta * r * R); 
 				double p = start_phi + (delta_phi* s* S);
-				System.out.println(r);
-				System.out.println(s);
+		
 				
 				double rad = radius+(radius*body.getQuickHeight(r, s));
 

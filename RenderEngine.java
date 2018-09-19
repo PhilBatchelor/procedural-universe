@@ -16,7 +16,6 @@ import com.jogamp.opengl.util.texture.TextureIO;
 import framework.Semantic;
 import rendercard.Camera.cameraMovement;
 
-
 import com.jogamp.newt.event.KeyEvent;
 import com.jogamp.newt.event.KeyListener;
 import com.jogamp.newt.event.MouseEvent;
@@ -59,8 +58,8 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 	final int width=1920;
 	final int height=1080;
 	private GLTerrainModel terrain;
-
-	Camera camera=new Camera(0f,1f,0f,0f,1f,0f);
+	private GameLogic gameLogic;
+	private Camera camera;
 
 	private float[] vertexDataSkybox;
 	private short[] elementDataSkybox;
@@ -68,6 +67,7 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 	private short[] elementDataSurfaceObjects ;
 	private float[] vertexDataTerrain;
 	private short[] elementDataTerrain;
+	private String skyboxfolder;
 
 	private interface Buffer {
 		int VERTEX_SKYBOX = 0;
@@ -110,9 +110,26 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 	private boolean mousing=false;
 
 	private long start;
+	
+	public RenderEngine(float[] vs, short[] es, float[] vo, short[] eo, float[] vt, short[] et, GLTerrainModel t,Camera c,GameLogic g, String s) {
+		vertexDataSkybox=vs;
+		elementDataSkybox=es;
+		vertexDataSurfaceObjects=vo;
+		elementDataSurfaceObjects=eo;
+		vertexDataTerrain=vt;
+		elementDataTerrain=et;
+		terrain=t;
+		camera=c;
+		gameLogic=g;
+		skyboxfolder=s;
+		setup();
+	}
+
 
 	@Override
 	public void display(GLAutoDrawable drawable) {
+		
+		gameLogic.update();
 
 		window.swapBuffers();
 
@@ -265,21 +282,10 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 		gl.glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTextureID);
 		gl.glDrawArrays(GL_TRIANGLES, 0, 36);
 		gl.glDepthFunc(GL_LESS);  // change depth function so depth test passes when values are equal to depth buffer's content
- 
 
 		window.swapBuffers();
 	}
 
-	public RenderEngine(float[] vs, short[] es, float[] vo, short[] eo, float[] vt, short[] et, GLTerrainModel t) {
-		vertexDataSkybox=vs;
-		elementDataSkybox=es;
-		vertexDataSurfaceObjects=vo;
-		elementDataSurfaceObjects=eo;
-		vertexDataTerrain=vt;
-		elementDataTerrain=et;
-		terrain=t;
-		setup();
-	}
 
 
 	private void setup() {
@@ -365,7 +371,7 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 
 
 			for (int i=0;i<6;i++) {
-				File texture = new File("models/"+skyboxPaths[i]);
+				File texture = new File("models/"+skyboxfolder+"/"+skyboxPaths[i]);
 				TextureData data = TextureIO.newTextureData(gl.getGLProfile(), texture, false, TextureIO.PNG);
 				int level = 0;
 
@@ -393,7 +399,7 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 		
 		// Load Whatever Diffuse Texture (Texture ID2)
 		try {
-			File texture = new File("models/"+"door.png");
+			File texture = new File("models/"+terrain.getTextureFilename());
 
 			/* Texture data is an object containing all the relevant information about texture.    */
 			TextureData data = TextureIO.newTextureData(gl.getGLProfile(), texture, false, TextureIO.PNG);

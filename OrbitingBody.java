@@ -23,12 +23,19 @@ public class OrbitingBody extends CelestialBody {
 	}
 
 	public void makeTerrain(int rings, int sectors,Terrain.level l,int iterations, float deviationFraction) {
-		terrain=new Terrain(50,50,this);
-		terrain.generateGlobalTerrain (l);
+		terrain=new Terrain(rings,sectors,this,l);
 		terrain.iterateGlobalTerrain(iterations, deviationFraction, false);
+	}
+	
+	public void updateTerrain(float range) {
+		terrain.updateTerrain(range);
 	}
 
 	public float getQuickHeight (int ring, int sector) {
 		return terrain.getQuickHeight(ring, sector);
+	}
+	
+	public String getDiffuseTexture() {
+		return terrain.getDiffuseTexture();
 	}
 }

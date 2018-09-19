@@ -11,8 +11,11 @@ import rendercard.Terrain.level;
 public class Universe {
 	
 	private final double PI=Math.PI;
+	
 	private GLModel model;
 	public GLTerrainModel terrain;
+	public Camera camera;
+	public GameLogic gameLogic;
 
 	public float[] vertexDataSkybox;
 	public short[] elementDataSkybox;
@@ -22,17 +25,23 @@ public class Universe {
 
 	public float[] vertexDataTerrain;
     public short[] elementDataTerrain;
+    public String skyboxfolder;
+
      
 	public Universe() {
+		camera=new Camera(0f,1f,0f,0f,1f,0f);
 		initUniverse();
 		initModel();
+		gameLogic=new GameLogic(this);
 	}
 	
 private void initUniverse() {
 	Planet lave=new Planet(PlanetaryClass.M,20);
-	lave.makeTerrain(50,50,Terrain.level.CRUDE,10,0.01f);
-	terrain=new GLTerrainModel(lave,25f,PI/2,0,50,50);
-	
+	lave.makeTerrain(80,160,Terrain.level.CRUDE,100,.0015f);
+	float initial_altitude=(float)lave.radius*6;
+	terrain=new GLTerrainModel(lave,initial_altitude,PI/2,0,80,160);
+	camera.setINSRelativeTo((OrbitingBody)lave,0f,initial_altitude,0f);
+	skyboxfolder="spacebox";
 }
 	
 private void initModel() {
@@ -81,5 +90,6 @@ private void initModel() {
 		// ** GENERATE TERRAIN DATA
 	    vertexDataTerrain=terrain.getVertexData();
 	    elementDataTerrain=terrain.getElementData();
+	    
 	}
 }

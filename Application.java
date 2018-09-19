@@ -16,7 +16,10 @@ public class Application {
 				universe.elementDataSurfaceObjects,
 				universe.vertexDataTerrain,
 				universe.elementDataTerrain,
-				universe.terrain);
+				universe.terrain,
+				universe.camera,
+				universe.gameLogic,
+				universe.skyboxfolder);
 	}
 
 
