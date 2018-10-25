@@ -1,6 +1,7 @@
 package rendercard;
 public class GameLogic {
 	Universe universe;
+	public boolean updateTerrainGFX=false;
 	
 	public GameLogic (Universe u) {
 		universe=u;
@@ -8,10 +9,19 @@ public class GameLogic {
 
 	public void update() {	
 		//System.out.println("Range to Lave: "+distance(universe.camera.INSPosition));
-	    universe.camera.relativeTo.updateTerrain(distance(universe.camera.INSPosition));
+		float[] spherical=CoordinateConversion.getSpherical(universe.camera.INSPosition);
+		//System.out.println("I think the camera spherical coordinates are:");
+		//System.out.println("r, theta, phi:=:"+spherical[0]+","+spherical[1]+","+spherical[2]);
+
+	    universe.camera.relativeTo.updateTerrain(spherical);
+	    if (universe.camera.relativeTo.terrainUpdated) {
+	    	universe.terrain=new  GLTerrainModel(universe.camera.relativeTo);
+	    	updateTerrainGFX=true;
+	    	universe.camera.relativeTo.terrainUpdated=false;
+	    }
 	}
 	
-	private float distance(float[] p) {
-		return (float) Math.sqrt( (p[0]*p[0])+ (p[1]*p[1])+ (p[2]*p[2]));
+	public GLTerrainModel getGLTerrainModel() {
+		return universe.terrain;
 	}
 }

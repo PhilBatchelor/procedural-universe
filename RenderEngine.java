@@ -11,7 +11,7 @@ import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
 import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
-
+import com.jogamp.opengl.util.texture.awt.AWTTextureIO;
 
 import framework.Semantic;
 import rendercard.Camera.cameraMovement;
@@ -57,7 +57,7 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 	private static GLWindow window;
 	final int width=1920;
 	final int height=1080;
-	private GLTerrainModel terrain;
+	private GLTerrainModel glTerrain;
 	private GameLogic gameLogic;
 	private Camera camera;
 
@@ -110,7 +110,7 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 	private boolean mousing=false;
 
 	private long start;
-	
+
 	public RenderEngine(float[] vs, short[] es, float[] vo, short[] eo, float[] vt, short[] et, GLTerrainModel t,Camera c,GameLogic g, String s) {
 		vertexDataSkybox=vs;
 		elementDataSkybox=es;
@@ -118,7 +118,7 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 		elementDataSurfaceObjects=eo;
 		vertexDataTerrain=vt;
 		elementDataTerrain=et;
-		terrain=t;
+		glTerrain=t;
 		camera=c;
 		gameLogic=g;
 		skyboxfolder=s;
@@ -128,12 +128,13 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 
 	@Override
 	public void display(GLAutoDrawable drawable) {
-		
+		GL4 gl = drawable.getGL().getGL4();
+
 		gameLogic.update();
+		if (gameLogic.updateTerrainGFX) {updateTerrain(gl); gameLogic.updateTerrainGFX=false;}
 
 		window.swapBuffers();
 
-		GL4 gl = drawable.getGL().getGL4();
 		gl.glClearBufferfv(GL_DEPTH, 0, clearDepth.put(0, 1f));
 		gl.glViewport(0, 0, width, height);
 
@@ -154,9 +155,9 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 				GL_UNIFORM_BUFFER,
 				Semantic.Uniform.TRANSFORM0,
 				bufferName.get(Buffer.GLOBAL_MATRICES1));
-		
+
 		gl.glUseProgram(lightCasterShader.name);
-	
+
 
 		// *** DRAW SURFACE OBJECTS
 
@@ -179,58 +180,58 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 
 		// Draw the regular objects
 		gl.glDepthMask(true);
-	
+
 		gl.glBindVertexArray(vertexArrayName.get(1));
-		
+
 		gl.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.DIFFUSE);
 		gl.glBindSampler(Semantic.Sampler.DIFFUSE, samplerName.get(0));
 		gl.glBindTexture(GL_TEXTURE_2D, textureID.get(0));
-		
+
 		gl.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.SPECULAR);
 		gl.glBindSampler(Semantic.Sampler.SPECULAR, samplerName.get(0));
 		gl.glBindTexture(GL_TEXTURE_2D, textureID.get(3));
-		
 
-        gl.glUniform3f(Semantic.Uniform.LIGHTDIRECTION, -0.2f, -1.0f, -0.3f);
-        gl.glUniform3f(Semantic.Uniform.VIEWPOS, camera.position[0],camera.position[1],camera.position[2]);
 
-        // light properties
-        gl.glUniform3f(Semantic.Uniform.LIGHTAMBIENT, 0.5f, 0.5f, 0.5f);
-        gl.glUniform3f(Semantic.Uniform.LIGHTDIFFUSE, 0.5f, 0.5f, 0.5f);
-        gl.glUniform3f(Semantic.Uniform.LIGHTSPECULAR, 1.0f, 1.0f, 1.0f);
+		gl.glUniform3f(Semantic.Uniform.LIGHTDIRECTION, -0.2f, -1.0f, -0.3f);
+		gl.glUniform3f(Semantic.Uniform.VIEWPOS, camera.position[0],camera.position[1],camera.position[2]);
 
-        // material properties
-        gl.glUniform1f(Semantic.Uniform.MATERIALSHININESS , 90.0f);
-		
+		// light properties
+		gl.glUniform3f(Semantic.Uniform.LIGHTAMBIENT, 0.5f, 0.5f, 0.5f);
+		gl.glUniform3f(Semantic.Uniform.LIGHTDIFFUSE, 0.5f, 0.5f, 0.5f);
+		gl.glUniform3f(Semantic.Uniform.LIGHTSPECULAR, 1.0f, 1.0f, 1.0f);
+
+		// material properties
+		gl.glUniform1f(Semantic.Uniform.MATERIALSHININESS , 90.0f);
+
 		gl.glDrawElements(
 				GL_TRIANGLES,
 				elementDataSurfaceObjects.length,
 				GL_UNSIGNED_SHORT,
 				0);
-        
-	
-		
+
+
+
 		// ******** DRAW THE TERRAIN *********
 		gl.glUseProgram(basicShader.name);
-		
+
 		// ** TRANSLATE TERRAIN AS IF WE ARE ON THE SURFACE
 		/*
 		float[] scale2 = FloatUtil.makeScale(new float[16], true, (float)terrain.radius, (float)terrain.radius,(float)terrain.radius);
 		float[] rotate2 = FloatUtil.makeRotationEuler(new float[16], 0, 0f,0f,(float)terrain.theta);
 		//float[] rotate2 = FloatUtil.makeRotationAxis(new float[16], 0, diff, 0f, 0f, 1f, new float[3]);
 		float[] translate2 = FloatUtil.makeTranslation(new float[16], 0,true, 0f,-(float)(terrain.radius+terrain.altitude),0f);
-		*/
-		
+		 */
+
 		// TRANSLATIONS FOR BEING IN SPACE
-		
-		float[] scale2 = FloatUtil.makeScale(new float[16], true, (float)terrain.radius, (float)terrain.radius,(float)terrain.radius);
+
+		float[] scale2 = FloatUtil.makeScale(new float[16], true, (float)glTerrain.radius, (float)glTerrain.radius,(float)glTerrain.radius);
 		//float[] rotate2 = FloatUtil.makeRotationAxis(new float[16], 0, diff, 0f, 0f, 1f, new float[3]);
-		float[] rotate2 = FloatUtil.makeRotationEuler(new float[16], 0, 0f,0f,(float)terrain.theta);
-		float[] translate2 = FloatUtil.makeTranslation(new float[16], 0,true, 0f,-(float)(terrain.radius+terrain.altitude),0f);
-		
+		float[] rotate2 = FloatUtil.makeRotationEuler(new float[16], 0, 0f,0f,0f);
+		float[] translate2 = FloatUtil.makeTranslation(new float[16], 0,true, -(float)(camera.INSStartPosition[0]),-(float)(camera.INSStartPosition[1]),-(float)(camera.INSStartPosition[2]));
+
 		//float[] scale2 = FloatUtil.makeScale(new float[16], true, 500.0f,500.0f,500.0f);
 		//float[] rotate2 = FloatUtil.makeRotationAxis(new float[16], 0, diff, 0f, 1f, 0f, new float[3]);
-		
+
 		//scale2 = FloatUtil.makeScale(new float[16], true, 1f,1f,1f);
 		//rotate2 = FloatUtil.makeRotationAxis(new float[16], 0, diff, 0f, 1f, 0f, new float[3]);
 		//translate2 = FloatUtil.makeTranslation(new float[16], 0,true, 0f,0f,-5f);
@@ -239,7 +240,7 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 
 		float[] model2 = FloatUtil.multMatrix(scale2, rotate2);
 		model2 = FloatUtil.multMatrix(translate2, model2);
-		
+
 		modelMatrixPointer2.asFloatBuffer().put(model2);
 		gl.glBindBufferBase(
 				GL_UNIFORM_BUFFER,
@@ -247,12 +248,12 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 				bufferName.get(Buffer.MODEL_MATRIX2));
 
 		// Draw the terrain objects
-	
+
 		gl.glBindVertexArray(vertexArrayName.get(2));
 		gl.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.DIFFUSE);
 		gl.glBindSampler(Semantic.Sampler.DIFFUSE, samplerName.get(0));
 		gl.glBindTexture(GL_TEXTURE_2D, textureID.get(2));
-		
+
 		gl.glDrawElements(
 				GL_TRIANGLES,
 				elementDataTerrain.length,
@@ -396,16 +397,16 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 			System.out.println("arrggghhh");
 			//Logger.getLogger(HelloTextureK.class.getName()).log(Level.SEVERE, null, ex);
 		}
-		
+
 		// Load Whatever Diffuse Texture (Texture ID2)
-		try {
-			File texture = new File("models/"+terrain.getTextureFilename());
+	
+	
 
 			/* Texture data is an object containing all the relevant information about texture.    */
-			TextureData data = TextureIO.newTextureData(gl.getGLProfile(), texture, false, TextureIO.PNG);
+	
+			TextureData data = AWTTextureIO.newTextureData(gl.getGLProfile(), glTerrain.getDiffuseTextureBufferedImage(), false); 
 
 			int level = 0;
-
 
 			gl.glBindTexture(GL_TEXTURE_2D, textureID.get(2));
 
@@ -429,19 +430,16 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 
 			gl.glBindTexture(GL_TEXTURE_2D, 0);
 
-		} catch (IOException ex) {
-			System.out.println("arrggghhh");
-			// Logger.getLogger(HelloTextureK.class.getName()).log(Level.SEVERE, null, ex);
-		}
 		
+
 		// Load Whatever Specular Texture (Texture ID3)
 		try {
 			File texture = new File("models/"+"goatspecular.png");
 
 			/* Texture data is an object containing all the relevant information about texture.    */
-			TextureData data = TextureIO.newTextureData(gl.getGLProfile(), texture, false, TextureIO.PNG);
+			data = TextureIO.newTextureData(gl.getGLProfile(), texture, false, TextureIO.PNG);
 
-			int level = 0;
+			level = 0;
 
 
 			gl.glBindTexture(GL_TEXTURE_2D, textureID.get(3));
@@ -504,6 +502,7 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 
 		gl.glEnable(GL_DEPTH_TEST);
 
+		// POLYGON MODE
 		//gl.glPolygonMode(GL_FRONT_AND_BACK,gl.GL_LINE);
 
 		start = System.currentTimeMillis();
@@ -545,6 +544,61 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 				true);
 	}
 
+	private void updateTerrain(GL4 gl) {
+		
+		// Replace the Terrain Data on the Graphics Card with fresh data from a GLTerrainModel object. 
+		
+		glTerrain=gameLogic.getGLTerrainModel();
+		vertexDataTerrain=glTerrain.getVertexData();
+		elementDataTerrain=glTerrain.getElementData();
+		
+		// Import vertex buffer stuff for terrain
+		System.out.print("Vertex Data Terrain Length: ");
+		System.out.println(vertexDataTerrain.length);
+
+		FloatBuffer vertexBufferTerrain = GLBuffers.newDirectFloatBuffer(vertexDataTerrain);
+		ShortBuffer elementBufferTerrain  = GLBuffers.newDirectShortBuffer(elementDataTerrain);
+		
+		gl.glBindBuffer(GL_ARRAY_BUFFER, bufferName.get(Buffer.VERTEX_TERRAIN));
+		gl.glBufferSubData(GL_ARRAY_BUFFER, 0, vertexBufferTerrain .capacity() * Float.BYTES, vertexBufferTerrain);
+		gl.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufferName.get(Buffer.ELEMENT_TERRAIN));
+		gl.glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, elementBufferTerrain .capacity() * Short.BYTES, elementBufferTerrain );
+		
+		// Replace the Terrain Texture on the Graphics Card with fresh data from a GLTerrainModel object. 
+		
+		// Load Whatever Diffuse Texture (Texture ID2)
+		
+			/* Texture data is an object containing all the relevant information about texture.    */
+			TextureData data = AWTTextureIO.newTextureData(gl.getGLProfile(), glTerrain.getDiffuseTextureBufferedImage(), false); 
+
+			int level = 0;
+
+			gl.glBindTexture(GL_TEXTURE_2D, textureID.get(2));
+
+			{
+				gl.glTexImage2D(GL_TEXTURE_2D,
+						level,
+						data.getInternalFormat(),
+						data.getWidth(), data.getHeight(),
+						data.getBorder(),
+						data.getPixelFormat(), data.getPixelType(),
+						data.getBuffer());
+
+				gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+				gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, level);
+
+				IntBuffer swizzle = GLBuffers.newDirectIntBuffer(new int[]{GL_RED, GL_GREEN, GL_BLUE, GL_ONE});
+				gl.glTexParameterIiv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
+
+				//destroyBuffer(swizzle);
+			}
+
+			gl.glBindTexture(GL_TEXTURE_2D, 0);
+
+		
+	}
+
+
 	private void initBuffers(GL4 gl) {
 
 
@@ -571,17 +625,14 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 		gl.glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, elementBufferSurfaceObjects.capacity() * Short.BYTES, elementBufferSurfaceObjects, 0);
 
 		// Import vertex buffer stuff for terrain
-		System.out.print("Vertex Data Terrain Length: ");
-		System.out.println(vertexDataTerrain.length);
-
 		FloatBuffer vertexBufferTerrain = GLBuffers.newDirectFloatBuffer(vertexDataTerrain);
 		ShortBuffer elementBufferTerrain  = GLBuffers.newDirectShortBuffer(elementDataTerrain);
 
 		// Setup the third buffers, to hold terrain
 		gl.glBindBuffer(GL_ARRAY_BUFFER, bufferName.get(Buffer.VERTEX_TERRAIN));
-		gl.glBufferStorage(GL_ARRAY_BUFFER, vertexBufferTerrain .capacity() * Float.BYTES, vertexBufferTerrain , 0);
+		gl.glBufferStorage(GL_ARRAY_BUFFER, vertexBufferTerrain .capacity() * Float.BYTES, vertexBufferTerrain , com.jogamp.opengl.GL4.GL_DYNAMIC_STORAGE_BIT);
 		gl.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufferName.get(Buffer.ELEMENT_TERRAIN));
-		gl.glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, elementBufferTerrain .capacity() * Short.BYTES, elementBufferTerrain , 0);
+		gl.glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, elementBufferTerrain .capacity() * Short.BYTES, elementBufferTerrain , com.jogamp.opengl.GL4.GL_DYNAMIC_STORAGE_BIT);
 
 
 		// Set up other buffers for matrices
@@ -602,7 +653,6 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 		gl.glBufferStorage(GL_UNIFORM_BUFFER, modelBlockSize, null, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 		gl.glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-		
 		gl.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.MODEL_MATRIX2));
 		gl.glBufferStorage(GL_UNIFORM_BUFFER, modelBlockSize, null, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 		gl.glBindBuffer(GL_UNIFORM_BUFFER, 0);
@@ -626,7 +676,7 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 				0,
 				16 * 4,
 				GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
-		
+
 		modelMatrixPointer2 = gl.glMapNamedBufferRange(
 				bufferName.get(Buffer.MODEL_MATRIX2),
 				0,
@@ -647,11 +697,11 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 			gl.glVertexArrayAttribBinding(vertexArrayName.get(i), Semantic.Attr.POSITION, Semantic.Stream.A);
 			gl.glVertexArrayAttribBinding(vertexArrayName.get(i), Semantic.Attr.NORMAL, Semantic.Stream.A);
 			gl.glVertexArrayAttribBinding(vertexArrayName.get(i), Semantic.Attr.TEXCOORD, Semantic.Stream.A);
-			
+
 			gl.glVertexArrayAttribFormat(vertexArrayName.get(i), Semantic.Attr.POSITION, 3, GL_FLOAT, false, 0);
 			gl.glVertexArrayAttribFormat(vertexArrayName.get(i), Semantic.Attr.NORMAL, 3, GL_FLOAT, false, (3*4));
 			gl.glVertexArrayAttribFormat(vertexArrayName.get(i), Semantic.Attr.TEXCOORD, 2, GL_FLOAT, false,(6*4));
-			
+
 			gl.glEnableVertexArrayAttrib(vertexArrayName.get(i), Semantic.Attr.POSITION);
 			gl.glEnableVertexArrayAttrib(vertexArrayName.get(i), Semantic.Attr.NORMAL);
 			gl.glEnableVertexArrayAttrib(vertexArrayName.get(i), Semantic.Attr.TEXCOORD);
@@ -707,15 +757,30 @@ public class RenderEngine implements GLEventListener, KeyListener, MouseListener
 
 		if (e.getKeyCode() == KeyEvent.VK_S) {
 			camera.ProcessKeyboard(cameraMovement.BACKWARD, 1);
-
 		}
 		if (e.getKeyCode() == KeyEvent.VK_A) {
 			camera.ProcessKeyboard(cameraMovement.LEFT, 1);
-
 		}
 		if (e.getKeyCode() == KeyEvent.VK_D) {
 			camera.ProcessKeyboard(cameraMovement.RIGHT, 1);
-
+		}
+		if (e.getKeyCode() == KeyEvent.VK_R) {
+			camera.ProcessKeyboard(cameraMovement.APPROACH, 1);
+		}
+		if (e.getKeyCode() == KeyEvent.VK_F) {
+			camera.ProcessKeyboard(cameraMovement.RECEDE, 1);
+		}
+		if (e.getKeyCode() == KeyEvent.VK_T) {
+			camera.ProcessKeyboard(cameraMovement.PLUSPHI, 1);
+		}
+		if (e.getKeyCode() == KeyEvent.VK_G) {
+			camera.ProcessKeyboard(cameraMovement.MINUSPHI, 1);
+		}
+		if (e.getKeyCode() == KeyEvent.VK_Y) {
+			camera.ProcessKeyboard(cameraMovement.PLUSTHETA, 1);
+		}
+		if (e.getKeyCode() == KeyEvent.VK_H) {
+			camera.ProcessKeyboard(cameraMovement.MINUSTHETA, 1);
 		}
 
 		if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {

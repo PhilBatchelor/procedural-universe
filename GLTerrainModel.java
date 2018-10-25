@@ -1,4 +1,5 @@
 package rendercard;
+import java.awt.image.BufferedImage;
 
 public class GLTerrainModel {	
 	final double PI=Math.PI;
@@ -9,10 +10,9 @@ public class GLTerrainModel {
 	private int vertexref=0;
 	private int elementref=0;
 	public double radius;
-	public double altitude;
 	public double theta;
 	public double phi;
-    private String terrain_texture_filename;
+	private BufferedImage img;
 
 	// Return vertex data from a terrain model
 	public float[] getVertexData() {
@@ -23,82 +23,89 @@ public class GLTerrainModel {
 	public short[] getElementData() {
 		return elementdata;
 	}
-	
-	public String getTextureFilename() {
-		return terrain_texture_filename;
+
+	public BufferedImage getDiffuseTextureBufferedImage() {
+		return img;
 	}
 
-	GLTerrainModel(OrbitingBody body, float alt,double the, double ph, int rings,int sectors) {
+	GLTerrainModel(OrbitingBody body) {
+		int inputRings=body.getRings();
+		int inputSectors=body.getSectors();
 
-		final double R=1.0f/(rings-1);
-		final double S=1.0f/(sectors-1);
+		int rings=(inputRings/8)+1;
+		int sectors=(inputSectors/8)+1;
 
-		altitude=alt;
-		double factor=(altitude+0.00001)/body.radius;
-		if (factor>1) factor=1;
-		if (factor<0.00001) factor=0.00001; 
+		int ringStep=8;
+		int sectorStep=8;
 
-		double delta_theta=factor*PI;
-		double delta_phi=factor*PI;
-		
-		if (factor==1) delta_phi=delta_phi*2;
-		theta=the;
-		phi=ph;
-		
-		double start_theta=theta-(delta_theta/2);
-		double start_phi=phi-(delta_phi/2);
-		
-		terrain_texture_filename=body.getDiffuseTexture();
-		
+		img=body.getDiffuseTextureBufferedImage();
+
 		vertexdata=new float[(rings * sectors * 8)];
 		elementdata=new short[(rings * sectors * 6)];
 
 		radius=1; // Consider the radius to be 1 for the purposes of the vertex data;
 
+		double R=1.0f/(rings-1);
+		double S=1.0f/(sectors-1);
+
+		System.out.println("rings , sectors of TerrainGeomety: "+inputRings+" , "+ inputSectors);
+		System.out.println("rings , sectors of GLTerrainModel: "+rings+" , "+ sectors);
+
+		float low_phi=999999999999f;
+		float low_theta=999999999999f;
+		float hi_phi=-999999999999f;
+		float hi_theta=-999999999999f;
 
 		for(int r = 0; r < rings; r++) {
 			for (int s = 0; s < sectors; s++) {
 
-				double t = start_theta + (delta_theta * r * R); 
-				double p = start_phi + (delta_phi* s* S);
-		
-				
-				double rad = radius+(radius*body.getQuickHeight(r, s));
+				double rad = radius+(radius*body.getQuickHeight(r*ringStep, s*sectorStep));
+				double theta = body.getQuickTheta(r*ringStep, s*sectorStep);
+				double phi = body.getQuickPhi(r*ringStep, s*sectorStep);
 
-				double x=CoordinateConversion.getX(1,t,p);
-				double y=CoordinateConversion.getY(1,t,p);
-				double z=CoordinateConversion.getZ(1,t,p);
+				double x=CoordinateConversion.getX(1,theta,phi);
+				double y=CoordinateConversion.getY(1,theta,phi);
+				double z=CoordinateConversion.getZ(1,theta,phi);
 
-				vertexdata[vertexref]=(float)(x*rad);
-				vertexref++;
-				vertexdata[vertexref]=(float)(y*rad);
-				vertexref++;
-				vertexdata[vertexref]=(float)(z*rad);
-				vertexref++;
-				
-				vertexdata[vertexref]=(float)(x);
-				vertexref++;
-				vertexdata[vertexref]=(float)(y);
-				vertexref++;
-				vertexdata[vertexref]=(float)(z);
-				vertexref++;
-				
-				vertexdata[vertexref]=(float)(s*S);
-				vertexref++;
-				vertexdata[vertexref]=(float)(r*R);
-				vertexref++;
+				if (phi  <  low_phi)   low_phi  =(float)phi;	
+				if (theta<  low_theta) low_theta=(float)theta;	
+				if (phi  >  hi_phi)    hi_phi=   (float)phi;	
+				if (theta>  hi_theta)  hi_theta= (float)theta;	
+
+				if (vertexref<vertexdata.length) {
+					vertexdata[vertexref]=(float)(x*rad);
+					vertexref++;
+					vertexdata[vertexref]=(float)(y*rad);
+					vertexref++;
+					vertexdata[vertexref]=(float)(z*rad);
+					vertexref++;
+
+					vertexdata[vertexref]=(float)(x);
+					vertexref++;
+					vertexdata[vertexref]=(float)(y);
+					vertexref++;
+					vertexdata[vertexref]=(float)(z);
+					vertexref++;
+
+					vertexdata[vertexref]=(float)(s*S);
+					vertexref++;
+					vertexdata[vertexref]=(float)(r*R);
+					vertexref++;
+				}
 			}
-
 		}
+
+		System.out.println("Terrain Segment Complete. Region Lo Phi, Low Theta, Hi Phi, Hi Theta: "+low_phi+" , "+low_theta+" , "+hi_phi+" , "+hi_theta);
 
 		int elerings=rings;
 		int elesectors=sectors;
-		if (factor<1.0) {
+		
+		if( (body.terrain.currentLevel!=Terrain.level.GLOBAL) &&(body.terrain.currentLevel!=Terrain.level.CRUDE)) {
 			elerings--;
 			elesectors--;
 		}
 
-		for(int r = 0; r < elerings; r++) 
+		for(int r = 0; r < elerings; r++) {
 			for(int s = 0; s < elesectors; s++) {
 
 				elementdata[elementref] = (short)(r * sectors + s);
@@ -115,8 +122,7 @@ public class GLTerrainModel {
 				elementdata[elementref] = (short)((r+1) * sectors + s);
 				elementref++;
 			}
-
+		}
 		radius=body.radius;
 	}
-
 }

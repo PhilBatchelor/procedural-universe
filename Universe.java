@@ -36,11 +36,13 @@ public class Universe {
 	}
 	
 private void initUniverse() {
-	Planet lave=new Planet(PlanetaryClass.M,20);
-	lave.makeTerrain(80,160,Terrain.level.CRUDE,100,.0015f);
-	float initial_altitude=(float)lave.radius*6;
-	terrain=new GLTerrainModel(lave,initial_altitude,PI/2,0,80,160);
-	camera.setINSRelativeTo((OrbitingBody)lave,0f,initial_altitude,0f);
+	
+	Planet lave=new Planet(PlanetaryClass.M,2000);
+	float initialAltitude=(float)lave.radius*2.1f;
+	float[] initialCartesian=CoordinateConversion.getCartesian(new float[]{initialAltitude,(float)0,(float)0});
+	lave.makeTerrain(Terrain.level.GLOBAL,800,.00055f);
+	terrain=new GLTerrainModel(lave);
+	camera.setINSRelativeTo((OrbitingBody)lave,initialCartesian[0],initialCartesian[1],initialCartesian[2]);
 	skyboxfolder="spacebox";
 }
 	
