@@ -20,7 +20,6 @@ public class Terrain {
 	public OrbitingBody parent;
 	public level currentLevel;
 
-
 	public float max_height=0;
 	public float min_height=0;
 	public float total_average_height=0;
@@ -323,6 +322,9 @@ public class Terrain {
 		}
 
 		if (updated) {
+			// Make sure the new Terrain object has a good resolution
+			terrainGeometries.get(currentLevel).diamondSquare(1, iterations, deviationFraction);
+			iterations++;
 			// Update the GLTerrain object (or the backup flip)
 			parent.terrainUpdated=true;
 			System.out.println(currentLevel);
