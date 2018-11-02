@@ -6,6 +6,7 @@ import rendercard.Terrain.level;
 import rendercard.Terrain.terrainType;
 
 public class TerrainGeometry {
+	public static enum special {NORMAL, XZERO, YZERO, XMAX, YMAX};
 	final float PI=(float)Math.PI;
 	final float PIBY2=(float)(Math.PI/2);
 	public float[] arrayTheta;
@@ -23,6 +24,7 @@ public class TerrainGeometry {
 	private int[] exportIndicies;
 	int exportRings=0;
 	int exportSectors=0;
+	public int iteration;
 
 	Terrain terrain;
 
@@ -127,12 +129,18 @@ public class TerrainGeometry {
 			}
 
 			//Square Step
+			special specialCase=special.NORMAL;
 			for (int y=0;y<height;y=y+1) {
 				float tempTheta=outputTheta[(y*width)+1];
 				int start_x=0; int end_x=width;
 				if ((y%2)==0) {start_x=1; end_x=width-1;  tempTheta=outputTheta[y*width];}
+				if (y==0) specialCase=special.YZERO;
+				if (y==height-1) specialCase=special.YMAX;
+
 
 				for (int x=start_x;x<end_x;x=x+2) {
+					if (x==0) specialCase=special.XZERO;
+					if (x==end_x-1) specialCase=special.XMAX;
 					int output_index=(y*width)+x;
 
 					int x1=x-1; int y1=y; 
@@ -150,12 +158,39 @@ public class TerrainGeometry {
 					int index3=(y3*width)+x3;
 					int index4=(y4*width)+x4;
 
+					select (specialCase) {
+						CASE NORMAL: 
 					outputDeviation[output_index]=((outputDeviation[index1]+outputDeviation[index2]+outputDeviation[index3]+outputDeviation[index4])/4.00f);
 					outputTheta[output_index]=tempTheta;
 					outputPhi[output_index]=outputPhi[index2];
 
+					break;
+					CASE XZERO:
+					outputDeviation[output_index]=((outputDeviation[index2]+outputDeviation[index3]+outputDeviation[index4])/3.00f);
+					outputTheta[output_index]=tempTheta;
+					outputPhi[output_index]=outputPhi[index2];
+					break;
+					CASE YZERO: 
+					outputDeviation[output_index]=((outputDeviation[index1]+outputDeviation[index3]+outputDeviation[index4])/3.00f);
+					outputTheta[output_index]=tempTheta;
+					outputPhi[output_index]=outputPhi[index4];
+					break;
+					CASE XMAX: 
+					outputDeviation[output_index]=((outputDeviation[index1]+outputDeviation[index2]+outputDeviation[index4])/3.00f);
+					outputTheta[output_index]=tempTheta;
+					outputPhi[output_index]=outputPhi[index2];
+					break;
+					CASE YMAX: 
+					outputDeviation[output_index]=((outputDeviation[index1]+outputDeviation[index2]+outputDeviation[index3])/3.00f);
+					outputTheta[output_index]=tempTheta;
+					outputPhi[output_index]=outputPhi[index2];
+					break;
+					}
+
 					// NEED TO ADD DISPLACEMENT eg average=average+(2*random.nextDouble()*Math.pow(r,i))-Math.pow(r,i);
+			        if ((specialCase==special.XZERO) || (specialCase=special.XMAX)) specialCase=special.NORMAL; 
 				}	
+                        specialCase=special.NORMAL;
 			}
 
 
@@ -534,5 +569,4 @@ public class TerrainGeometry {
 	}
 
 }
-
 
